@@ -6,13 +6,17 @@ open Shared
 
 type Model =
     { Todos: Todo list
-      Input: string }
+      Input: string
+      MyName: string option
+      People: string list
+      Results: list<string*(string*string)> }
 
 type Msg =
     | GotTodos of Todo list
     | SetInput of string
     | AddTodo
     | AddedTodo of Todo
+    | Identify of string
 
 let todosApi =
     Remoting.createApi()
@@ -22,7 +26,10 @@ let todosApi =
 let init(): Model * Cmd<Msg> =
     let model =
         { Todos = []
-          Input = "" }
+          Input = ""
+          MyName = None
+          People = SantaHatThings.people
+          Results = SantaHatThings.result }
     let cmd = Cmd.OfAsync.perform todosApi.getTodos () GotTodos
     model, cmd
 
@@ -38,12 +45,14 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
         { model with Input = "" }, cmd
     | AddedTodo todo ->
         { model with Todos = model.Todos @ [ todo ] }, Cmd.none
+    | Identify myName ->
+        { model with MyName = Some myName }, Cmd.none
 
 open Fable.React
 open Fable.React.Props
 open Fulma
 
-let navBrand =
+let viewNavBrand =
     Navbar.Brand.div [ ] [
         Navbar.Item.a [
             Navbar.Item.Props [ Href "https://safe-stack.github.io/" ]
@@ -56,31 +65,48 @@ let navBrand =
         ]
     ]
 
-let containerBox (model : Model) (dispatch : Msg -> unit) =
+let viewContainerBox (model : Model) (dispatch : Msg -> unit) =
     Box.box' [ ] [
         Content.content [ ] [
-            Content.Ol.ol [ ] [
-                for todo in model.Todos do
-                    li [ ] [ str todo.Description ]
-            ]
-        ]
-        Field.div [ Field.IsGrouped ] [
-            Control.p [ Control.IsExpanded ] [
-                Input.text [
-                  Input.Value model.Input
-                  Input.Placeholder "What needs to be done?"
-                  Input.OnChange (fun x -> SetInput x.Value |> dispatch) ]
-            ]
-            Control.p [ ] [
-                Button.a [
-                    Button.Color IsPrimary
-                    Button.Disabled (Todo.isValid model.Input |> not)
-                    Button.OnClick (fun _ -> dispatch AddTodo)
-                ] [
-                    str "Add"
+            match model.MyName with
+            | Some me ->
+                p [ ] [ str (sprintf "Welcome, %s! You are secret santa to:" me) ]
+                let a, b = model.Results |> Map.ofList |> Map.find me
+                Content.Ol.ol [ ] [
+                    for recipient in [a;b] ->
+                        li [ ] [ str recipient ]
                 ]
-            ]
+            | None ->
+                Control.div [ ] [
+                    str "I am:"
+                    Input.input [
+                        Input.Value model.Input
+                        Input.OnChange (fun x -> SetInput x.Value |> dispatch)
+                    ]
+                    Button.a [
+                        Button.OnClick (fun _ -> dispatch (Identify model.Input))
+                    ] [
+                        str "OK"
+                    ]
+                ]
         ]
+        //Field.div [ Field.IsGrouped ] [
+        //    Control.p [ Control.IsExpanded ] [
+        //        Input.text [
+        //          Input.Value model.Input
+        //          Input.Placeholder "What needs to be done?"
+        //          Input.OnChange (fun x -> SetInput x.Value |> dispatch) ]
+        //    ]
+        //    Control.p [ ] [
+        //        Button.a [
+        //            Button.Color IsPrimary
+        //            Button.Disabled (Todo.isValid model.Input |> not)
+        //            Button.OnClick (fun _ -> dispatch AddTodo)
+        //        ] [
+        //            str "Add"
+        //        ]
+        //    ]
+        //]
     ]
 
 let view (model : Model) (dispatch : Msg -> unit) =
@@ -96,7 +122,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
     ] [
         Hero.head [ ] [
             Navbar.navbar [ ] [
-                Container.container [ ] [ navBrand ]
+                Container.container [ ] [ viewNavBrand ]
             ]
         ]
 
@@ -107,7 +133,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                     Column.Offset (Screen.All, Column.Is3)
                 ] [
                     Heading.p [ Heading.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ] [ str "SantaHat" ]
-                    containerBox model dispatch
+                    viewContainerBox model dispatch
                 ]
             ]
         ]
