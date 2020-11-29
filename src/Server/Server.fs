@@ -5,10 +5,25 @@ open Fable.Remoting.Giraffe
 open Saturn
 
 open Shared
+open System
 
-type Storage () =
+module SantaHatThings =
+    let people = ["Alan"; "Paula"; "Paul"; "Allison"; "Sarah"; "Peter"; "Rebecca"; "John"]
+
+    let pairSantas people =
+        let rand = new Random()
+        let nPeople = List.length people
+        [ for gifter in people ->
+            let recipient1 = people.[rand.Next nPeople]
+            let recipient2 = people.[rand.Next nPeople]
+            gifter, (recipient1, recipient2)
+        ]
+
+type Storage (people: string list) =
     let todos = ResizeArray<_>()
 
+    let results = SantaHatThings.pairSantas people |> Map.ofList
+    
     member __.GetTodos () =
         List.ofSeq todos
 
@@ -18,7 +33,13 @@ type Storage () =
             Ok ()
         else Error "Invalid todo"
 
-let storage = Storage()
+    member __.GetPeople () = people
+    member __.TryGetResults (person: string) =
+        match Map.tryFind person results with
+        | Some results -> Ok results
+        | None -> Error "No such person"
+
+let storage = Storage(SantaHatThings.people)
 
 storage.AddTodo(Todo.create "Create new SAFE project") |> ignore
 storage.AddTodo(Todo.create "Write your app") |> ignore
@@ -30,6 +51,16 @@ let todosApi =
         fun todo -> async {
             match storage.AddTodo todo with
             | Ok () -> return todo
+            | Error e -> return failwith e
+        }
+      getPeople =
+        fun () -> async {
+            return storage.GetPeople ()
+        }
+      getResults =
+        fun person -> async {
+            match storage.TryGetResults person with
+            | Ok results -> return results
             | Error e -> return failwith e
         } }
 

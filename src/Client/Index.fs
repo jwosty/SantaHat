@@ -9,7 +9,7 @@ type Model =
       Input: string
       MyName: string option
       People: string list
-      Results: list<string*(string*string)> }
+      Results: string*string }
 
 type Msg =
     | GotTodos of Todo list
@@ -17,6 +17,8 @@ type Msg =
     | AddTodo
     | AddedTodo of Todo
     | Identify of string
+    | GotPeople of string list
+    | GotResults of string * string
 
 let todosApi =
     Remoting.createApi()
@@ -28,9 +30,9 @@ let init(): Model * Cmd<Msg> =
         { Todos = []
           Input = ""
           MyName = None
-          People = SantaHatThings.people
-          Results = SantaHatThings.result }
-    let cmd = Cmd.OfAsync.perform todosApi.getTodos () GotTodos
+          People = []
+          Results = "","" }
+    let cmd = Cmd.OfAsync.perform todosApi.getPeople () GotPeople
     model, cmd
 
 let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
@@ -46,7 +48,11 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     | AddedTodo todo ->
         { model with Todos = model.Todos @ [ todo ] }, Cmd.none
     | Identify myName ->
-        { model with MyName = Some myName }, Cmd.none
+        { model with MyName = Some myName }, Cmd.OfAsync.perform todosApi.getResults myName GotResults
+    | GotPeople people ->
+        { model with People = people }, Cmd.none
+    | GotResults (r1, r2) ->
+        { model with Results = r1,r2 }, Cmd.none
 
 open Fable.React
 open Fable.React.Props
@@ -71,22 +77,21 @@ let viewContainerBox (model : Model) (dispatch : Msg -> unit) =
             match model.MyName with
             | Some me ->
                 p [ ] [ str (sprintf "Welcome, %s! You are secret santa to:" me) ]
-                let a, b = model.Results |> Map.ofList |> Map.find me
+                let a, b = model.Results
                 Content.Ol.ol [ ] [
                     for recipient in [a;b] ->
                         li [ ] [ str recipient ]
                 ]
             | None ->
                 Control.div [ ] [
-                    str "I am:"
-                    Input.input [
-                        Input.Value model.Input
-                        Input.OnChange (fun x -> SetInput x.Value |> dispatch)
-                    ]
-                    Button.a [
-                        Button.OnClick (fun _ -> dispatch (Identify model.Input))
-                    ] [
-                        str "OK"
+                    Control.p [ ] [ str "Who are you?" ]
+                    Control.div [ ] [
+                        for person in model.People do
+                            Button.a [
+                                Button.OnClick (fun _ -> dispatch (Identify person))
+                            ] [
+                                str person
+                            ]
                     ]
                 ]
         ]
