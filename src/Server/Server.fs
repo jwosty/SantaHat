@@ -11,7 +11,7 @@ type GiveTo = string * (string * string)
 
 module SantaHatThings =
     let people = ["Alan"; "Paula"; "Paul"; "Allison"; "Sarah"; "Peter"; "Rebecca"; "John"]
-
+    let spouses = ["Alan", "Paula"; "Paul", "Allison"; "Peter", "Rebecca"]
     let pairSantas people =
         let rand = new Random()
         let nPeople = List.length people
@@ -27,11 +27,26 @@ module SantaHatThings =
         recipient1 <> giver && recipient2 <> giver
 
     let allGiveToOthers (xs: GiveTo list) = xs |> List.forall giveToOthers
+    //let noSpousesTogether ((giver, (recipient1, recipient2))) =
+    let isMarriedTo person1 person2 spouses =
+        spouses |> Seq.exists (fun (him, her) ->
+            (person1 = him && person2 = her) || (person2 = him && person1 = her))
+    let notMarriedTo person1 person2 spouses = isMarriedTo person1 person2 spouses |> not
+
+    let allGiveToOtherThanSpouse (xs: GiveTo list) = true//xs |> List.forAll (fun (person,(r1,r2)) -> notMarriedTo person1 r1 spouses  //todo write more code
+
+    //isMarriedTo "Paula" "Alan" spouses = true
+    //isMarriedTo "Alan" "Paula" spouses = true
+    //isMarriedTo "Alan" "Rebecca" spouses = false
+    //isMarriedTo "Paula" "Paula" spouses = false
 
 type Storage (people: string list) =
     let results =
-        SantaHatThings.pairSantas people |> Seq.filter SantaHatThings.allGiveToOthers |> Seq.head
-        |> Map.ofList
+        SantaHatThings.pairSantas people |>
+        Seq.filter SantaHatThings.allGiveToOthers |>
+        Seq.filter SantaHatThings.allGiveToOtherThanSpouse |>
+        Seq.head |>
+        Map.ofList
 
     member __.GetPeople () = people
     member __.TryGetResults (person: string) =
