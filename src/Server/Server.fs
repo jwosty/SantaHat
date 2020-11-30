@@ -27,26 +27,28 @@ module SantaHatThings =
         recipient1 <> giver && recipient2 <> giver
 
     let allGiveToOthers (xs: GiveTo list) = xs |> List.forall giveToOthers
-    //let noSpousesTogether ((giver, (recipient1, recipient2))) =
-    let isMarriedTo person1 person2 spouses =
+    let isMarriedTo spouses person1 person2  =
         spouses |> Seq.exists (fun (him, her) ->
             (person1 = him && person2 = her) || (person2 = him && person1 = her))
-    let notMarriedTo person1 person2 spouses = isMarriedTo person1 person2 spouses |> not
+    let notMarriedTo spouses (giver,(r1,r2))  = not (isMarriedTo spouses giver r1) && not (isMarriedTo spouses giver r2)
 
-    let allGiveToOtherThanSpouse (xs: GiveTo list) = true//xs |> List.forAll (fun (person,(r1,r2)) -> notMarriedTo person1 r1 spouses  //todo write more code
+    let allGiveToOtherThanSpouse spouses (xs: GiveTo list) =
+        xs |> List.forall (notMarriedTo spouses)
+
+    let filteredSantaPairs spouses people =
+        pairSantas people
+        |> Seq.filter allGiveToOthers
+        |> Seq.filter (allGiveToOtherThanSpouse spouses)
+        |> Seq.head
+        |> Map.ofList
 
     //isMarriedTo "Paula" "Alan" spouses = true
     //isMarriedTo "Alan" "Paula" spouses = true
     //isMarriedTo "Alan" "Rebecca" spouses = false
     //isMarriedTo "Paula" "Paula" spouses = false
 
-type Storage (people: string list) =
-    let results =
-        SantaHatThings.pairSantas people |>
-        Seq.filter SantaHatThings.allGiveToOthers |>
-        Seq.filter SantaHatThings.allGiveToOtherThanSpouse |>
-        Seq.head |>
-        Map.ofList
+type Storage(people, spouses) =
+    let results = SantaHatThings.filteredSantaPairs spouses people
 
     member __.GetPeople () = people
     member __.TryGetResults (person: string) =
@@ -54,7 +56,7 @@ type Storage (people: string list) =
         | Some results -> Ok results
         | None -> Error "No such person"
 
-let storage = Storage(SantaHatThings.people)
+let storage = Storage(SantaHatThings.people, SantaHatThings.spouses)
 
 let santaHatApi =
     { getPeople =
