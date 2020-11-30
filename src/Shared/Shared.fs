@@ -8,4 +8,4 @@ module Route =
 
 type ISantaHatApi =
     { getPeople : unit -> Async<string list>
-      getResults : string -> Async<string*string> }
+      getResults : string -> Async<string list> }

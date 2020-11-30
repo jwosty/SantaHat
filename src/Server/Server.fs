@@ -7,45 +7,62 @@ open Saturn
 open Shared
 open System
 
-type GiveTo = string * (string * string)
+module Array =
+    let shuffleInPlace (rand: Random) (array: 'a[]) =
+        for n in array.Length - 1 .. -1 .. 1 do
+            let k = rand.Next n
+            let tmp = array.[n]
+            array.[n] <- array.[k]
+            array.[k] <- tmp
+
+module List =
+    let shuffle (rand: Random) (list: 'a list) =
+        let arr = List.toArray list
+        Array.shuffleInPlace rand arr
+        List.ofArray arr
+
+type GiveTo = string * (string list)
 
 module SantaHatThings =
-    let people = ["Alan"; "Paula"; "Paul"; "Allison"; "Sarah"; "Peter"; "Rebecca"; "John"]
-    let spouses = ["Alan", "Paula"; "Paul", "Allison"; "Peter", "Rebecca"]
-    let pairSantas people =
+    let spouses = [("Alan", "Paula"); ("Paul", "Allison"); ("Peter", "Rebecca")]
+    let singles = ["Sarah"; "John"]
+
+    let people = [
+        for (a,b) in spouses do yield a; yield b
+        for a in singles do yield a
+    ]
+
+    let pairSantas n (people: string list) =
         let rand = new Random()
-        let nPeople = List.length people
+
+        let hat = people |> Seq.replicate n |> Seq.concat |> Seq.toArray
+
         Seq.initInfinite (fun _ ->
-            [ for gifter in people ->
-                let recipient1 = people.[rand.Next nPeople]
-                let recipient2 = people.[rand.Next nPeople]
-                gifter, (recipient1, recipient2)
-            ]
+            Array.shuffleInPlace rand hat
+            let recipientSet = List.chunkBySize n (Array.toList hat)
+            List.zip people recipientSet
         )
 
-    let giveToOthers ((giver, (recipient1, recipient2))) =
-        recipient1 <> giver && recipient2 <> giver
+    let giveToOthers (giver, recipients) =
+        not (List.contains giver recipients)
 
     let allGiveToOthers (xs: GiveTo list) = xs |> List.forall giveToOthers
     let isMarriedTo spouses person1 person2  =
         spouses |> Seq.exists (fun (him, her) ->
             (person1 = him && person2 = her) || (person2 = him && person1 = her))
-    let notMarriedTo spouses (giver,(r1,r2))  = not (isMarriedTo spouses giver r1) && not (isMarriedTo spouses giver r2)
+    let notMarriedTo spouses (giver, recipients) =
+        recipients |> List.forall (fun r -> not (isMarriedTo spouses giver r))
+        //not (isMarriedTo spouses giver r1) && not (isMarriedTo spouses giver r2)
 
     let allGiveToOtherThanSpouse spouses (xs: GiveTo list) =
         xs |> List.forall (notMarriedTo spouses)
 
     let filteredSantaPairs spouses people =
-        pairSantas people
+        pairSantas 2 people
         |> Seq.filter allGiveToOthers
         |> Seq.filter (allGiveToOtherThanSpouse spouses)
         |> Seq.head
         |> Map.ofList
-
-    //isMarriedTo "Paula" "Alan" spouses = true
-    //isMarriedTo "Alan" "Paula" spouses = true
-    //isMarriedTo "Alan" "Rebecca" spouses = false
-    //isMarriedTo "Paula" "Paula" spouses = false
 
 type Storage(people, spouses) =
     let results = SantaHatThings.filteredSantaPairs spouses people

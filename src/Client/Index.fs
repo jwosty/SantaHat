@@ -7,12 +7,12 @@ open Shared
 type Model =
     { MyName: string option
       People: string list
-      Results: string*string }
+      Results: string list }
 
 type Msg =
     | Identify of string
     | GotPeople of string list
-    | GotResults of string * string
+    | GotResults of string list
 
 let santaHatApi =
     Remoting.createApi()
@@ -23,7 +23,7 @@ let init(): Model * Cmd<Msg> =
     let model =
         { MyName = None
           People = []
-          Results = "","" }
+          Results = [] }
     let cmd = Cmd.OfAsync.perform santaHatApi.getPeople () GotPeople
     model, cmd
 
@@ -33,8 +33,8 @@ let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
         { model with MyName = Some myName }, Cmd.OfAsync.perform santaHatApi.getResults myName GotResults
     | GotPeople people ->
         { model with People = people }, Cmd.none
-    | GotResults (r1, r2) ->
-        { model with Results = r1,r2 }, Cmd.none
+    | GotResults rs ->
+        { model with Results = rs }, Cmd.none
 
 open Fable.React
 open Fable.React.Props
@@ -59,9 +59,8 @@ let viewContainerBox (model : Model) (dispatch : Msg -> unit) =
             match model.MyName with
             | Some me ->
                 p [ ] [ str (sprintf "Welcome, %s! You are secret santa to:" me) ]
-                let a, b = model.Results
                 Content.Ol.ol [ ] [
-                    for recipient in [a;b] ->
+                    for recipient in model.Results ->
                         li [ ] [ str recipient ]
                 ]
             | None ->
