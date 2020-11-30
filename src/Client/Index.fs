@@ -5,50 +5,32 @@ open Fable.Remoting.Client
 open Shared
 
 type Model =
-    { Todos: Todo list
-      Input: string
-      MyName: string option
+    { MyName: string option
       People: string list
       Results: string*string }
 
 type Msg =
-    | GotTodos of Todo list
-    | SetInput of string
-    | AddTodo
-    | AddedTodo of Todo
     | Identify of string
     | GotPeople of string list
     | GotResults of string * string
 
-let todosApi =
+let santaHatApi =
     Remoting.createApi()
     |> Remoting.withRouteBuilder Route.builder
-    |> Remoting.buildProxy<ITodosApi>
+    |> Remoting.buildProxy<ISantaHatApi>
 
 let init(): Model * Cmd<Msg> =
     let model =
-        { Todos = []
-          Input = ""
-          MyName = None
+        { MyName = None
           People = []
           Results = "","" }
-    let cmd = Cmd.OfAsync.perform todosApi.getPeople () GotPeople
+    let cmd = Cmd.OfAsync.perform santaHatApi.getPeople () GotPeople
     model, cmd
 
 let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     match msg with
-    | GotTodos todos ->
-        { model with Todos = todos }, Cmd.none
-    | SetInput value ->
-        { model with Input = value }, Cmd.none
-    | AddTodo ->
-        let todo = Todo.create model.Input
-        let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
-        { model with Input = "" }, cmd
-    | AddedTodo todo ->
-        { model with Todos = model.Todos @ [ todo ] }, Cmd.none
     | Identify myName ->
-        { model with MyName = Some myName }, Cmd.OfAsync.perform todosApi.getResults myName GotResults
+        { model with MyName = Some myName }, Cmd.OfAsync.perform santaHatApi.getResults myName GotResults
     | GotPeople people ->
         { model with People = people }, Cmd.none
     | GotResults (r1, r2) ->
@@ -95,23 +77,6 @@ let viewContainerBox (model : Model) (dispatch : Msg -> unit) =
                     ]
                 ]
         ]
-        //Field.div [ Field.IsGrouped ] [
-        //    Control.p [ Control.IsExpanded ] [
-        //        Input.text [
-        //          Input.Value model.Input
-        //          Input.Placeholder "What needs to be done?"
-        //          Input.OnChange (fun x -> SetInput x.Value |> dispatch) ]
-        //    ]
-        //    Control.p [ ] [
-        //        Button.a [
-        //            Button.Color IsPrimary
-        //            Button.Disabled (Todo.isValid model.Input |> not)
-        //            Button.OnClick (fun _ -> dispatch AddTodo)
-        //        ] [
-        //            str "Add"
-        //        ]
-        //    ]
-        //]
     ]
 
 let view (model : Model) (dispatch : Msg -> unit) =
