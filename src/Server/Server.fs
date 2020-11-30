@@ -7,22 +7,33 @@ open Saturn
 open Shared
 open System
 
+type GiveTo = string * (string * string)
+
 module SantaHatThings =
     let people = ["Alan"; "Paula"; "Paul"; "Allison"; "Sarah"; "Peter"; "Rebecca"; "John"]
 
     let pairSantas people =
         let rand = new Random()
         let nPeople = List.length people
-        [ for gifter in people ->
-            let recipient1 = people.[rand.Next nPeople]
-            let recipient2 = people.[rand.Next nPeople]
-            gifter, (recipient1, recipient2)
-        ]
+        Seq.initInfinite (fun _ ->
+            [ for gifter in people ->
+                let recipient1 = people.[rand.Next nPeople]
+                let recipient2 = people.[rand.Next nPeople]
+                gifter, (recipient1, recipient2)
+            ]
+        )
+
+    let giveToOthers ((giver, (recipient1, recipient2))) =
+        recipient1 <> giver && recipient2 <> giver
+
+    let allGiveToOthers (xs: GiveTo list) = xs |> List.forall giveToOthers
 
 type Storage (people: string list) =
     let todos = ResizeArray<_>()
 
-    let results = SantaHatThings.pairSantas people |> Map.ofList
+    let results =
+        SantaHatThings.pairSantas people |> Seq.filter SantaHatThings.allGiveToOthers |> Seq.head
+        |> Map.ofList
     
     member __.GetTodos () =
         List.ofSeq todos
