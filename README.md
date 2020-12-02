@@ -1,6 +1,5 @@
-# SAFE Template
-This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
-
+#  Santa Hat
+Secret Santa gift picks for our family. Built using the [SAFE Stack](https://safe-stack.github.io/).
 ## Install pre-requisites
 You'll need to install the following pre-requisites in order to build SAFE applications
 
