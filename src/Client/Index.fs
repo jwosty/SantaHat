@@ -19,14 +19,18 @@ let santaHatApi =
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<ISantaHatApi>
 
+// init produces the initial model
 let init(): Model * Cmd<Msg> =
     let model =
         { MyName = None
           People = []
           Results = [] }
+    //get all the people from the server asynchronously, when done,
+    //send GotPeople to the model
     let cmd = Cmd.OfAsync.perform santaHatApi.getPeople () GotPeople
     model, cmd
 
+//produce a new model, elmish will automatically call top level /view/
 let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     match msg with
     | Identify myName ->
